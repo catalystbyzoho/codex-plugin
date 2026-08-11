@@ -19,6 +19,7 @@
   ],
   "skills": "./skills/",
   "apps": "./.app.json",
+  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Catalyst by Zoho",
     "shortDescription": "Use Catalyst by Zoho capabilities in Codex.",
@@ -27,6 +28,7 @@
     "category": "Development Tools",
     "capabilities": [
       "MCP",
+      "Hooks",
       "Read",
       "Write"
     ],
