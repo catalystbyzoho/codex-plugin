@@ -1,9 +1,9 @@
 ---
 name: catalyst-zoho-mcp
-description: "Catalyst Zoho MCP — manage Catalyst infrastructure (tables, buckets, cache) via CatalystbyZoho_* MCP tools using natural language. Trigger on 'Zoho MCP', 'MCP tools', 'catalyst MCP', 'CatalystbyZoho', 'create table with AI', 'MCP setup', 'MCP config', 'global MCP server', 'infrastructure as conversation', 'MCP first', 'avoid Catalyst console', or 'use MCP instead of console', 'switch DC', 'change data center'."
+description: "Catalyst Zoho MCP — manage Catalyst infrastructure (tables, buckets, cache) via CatalystbyZoho_* MCP tools using natural language. Trigger on 'Zoho MCP', 'MCP tools', 'catalyst MCP', 'CatalystbyZoho', 'create table with AI', 'MCP setup', 'MCP config', 'global MCP server', 'infrastructure as conversation', 'MCP first', or 'avoid Catalyst console'. For Codex DC selection or switching, load catalyst-switch-dc."
 metadata:
-  version: "2.3.1"
-  compatibility: "Requires Codex with the Catalyst connector/plugin or another MCP-capable AI host such as Claude Desktop, VS Code with GitHub Copilot, or Cursor."
+  version: "2.4.0"
+  compatibility: "Requires an MCP-capable client. The Codex plugin bundles regional OAuth MCP definitions; the user must explicitly select one DC with catalyst-switch-dc and restart Codex."
 ---
 
 ## How It Works
@@ -12,20 +12,10 @@ metadata:
 
 2. **⛔ MCP NOT connected — HARD STOP.**
    Do NOT write any code, create any files, or call any SDK.
-   Ask the user which setup path they prefer, then load `references/zoho-mcp.md` and follow only that path.
+   In Codex, load `catalyst-switch-dc`, require an explicit regional DC, apply the supported plugin-policy configuration, and require a restart. In other clients, load `references/zoho-mcp.md` and follow that client's setup path.
    Do not proceed to step 3 until the `ZohoMCP_*` meta-tools are present in the tool list (this is the "MCP connected" signal — the `CatalystbyZoho_*` names never appear as tools).
 
-   > **To work with Catalyst via MCP, choose your setup path:**
-   >
-   > **Option A — Global MCP Server** *(recommended)*
-  > Add your DC-specific URL to Codex or your AI client config, authorize once via browser, done. No console needed. Pick your DC's URL from the table in `references/zoho-mcp.md` (setup) — or `references/dc-switching.md` to change DCs later.
-   >
-   > **Option B — Personal MCP Server** *(custom/team setup)*
-   > Create your own server at mcp.zoho.com, select tools, get a personal URL with a token embedded.
-   >
-   > *Which would you prefer?*
-
-3. **DC switch request?** — If the user asks to switch data centers (e.g. "connect to IN DC", "switch to EU", "logout of MCP server"), load `references/dc-switching.md` and follow it. Do not use `zoho-mcp.md` for this.
+3. **DC switch request?** — If the user asks to switch data centers in Codex (e.g. "connect to IN DC", "switch to EU"), load `catalyst-switch-dc`. It updates only supported user-level plugin policy, never the installed `.mcp.json`. Stop all MCP operations after the change until Codex restarts. For other clients, load `references/dc-switching.md`.
 
 4. **Pre-flight sequence** — Once per session, before your first MCP tool call, follow the single canonical pre-flight in `../catalyst-basics/references/preflight.md`: read org (`projects[].env[].id`) and project (`projects[].id`) from `.catalystrc` and confirm parity with MCP via `CatalystbyZoho_Get_Project_By_Id`, or resolve via `List_All_Organizations` → `List_All_Projects` when `.catalystrc` is absent. Once it passes, trust the context for the rest of the session — do not re-verify before every call.
 
@@ -37,7 +27,7 @@ metadata:
 
 ## Triggers
 
-Use this skill for: "Zoho MCP", "MCP tools", "catalyst MCP", "create table with AI", "MCP DataStore", "MCP Cache", "MCP Stratus", `zoho-mcp-server`, "MCP setup", "MCP config", "global MCP server", "infrastructure as conversation", "Codex Catalyst MCP", "MCP tool error", "MCP not connecting", "use AI to create database table", `CatalystbyZoho_` tool, "switch DC", "change data center", "connect to IN DC", "switch to EU", "logout of MCP server".
+Use this skill for: "Zoho MCP", "MCP tools", "catalyst MCP", "create table with AI", "MCP DataStore", "MCP Cache", "MCP Stratus", `zoho-mcp-server`, "MCP setup", "MCP config", "global MCP server", "infrastructure as conversation", "Codex Catalyst MCP", "MCP tool error", "MCP not connecting", "use AI to create database table", or a `CatalystbyZoho_` tool. Route Codex DC selection and switching to `catalyst-switch-dc`.
 
 ## References
 

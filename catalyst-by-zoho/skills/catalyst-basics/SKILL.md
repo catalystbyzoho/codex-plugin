@@ -2,7 +2,7 @@
 name: catalyst-basics
 description: "Core Catalyst project setup — directory structure, environments, CLI commands, and all Catalyst IDs (Project ID, ZAID, Table ID, Segment ID, Org ID). Trigger on 'start a Catalyst project', 'what is .catalystrc', 'where do I find my Table ID', 'difference between Development and Production', or any Catalyst ID or CLI question."
 metadata:
-  version: "2.2.0"
+  version: "2.2.1"
 ---
 
 > **⚠️ PRE-FLIGHT CHECK:** Before creating any project files, confirm that `.catalystrc` and
@@ -35,7 +35,7 @@ metadata:
 
 **If MCP tools are NOT available:**
 - Prompt the user to connect Zoho MCP before proceeding
-- Guide them to the Codex connector/plugin setup first, or to their host's MCP settings if they are using another MCP-capable client
+- In Codex, load `catalyst-switch-dc`, require an explicit regional selection, and restart; in another MCP-capable client, guide them to that host's MCP settings
 - Fall back to reading `.catalystrc` and `catalyst.json` from the local project directory only as a last resort
 
 > **Never ask the user to manually look up IDs from the console** if MCP is connected. Every project detail — org ID, project ID, table IDs, ZAIDs, bucket names — is retrievable via MCP tools. Asking the user to hunt for IDs when MCP is available wastes time and introduces copy-paste errors.

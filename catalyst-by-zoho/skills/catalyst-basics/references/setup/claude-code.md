@@ -1,6 +1,6 @@
 # Using Catalyst Skills with Claude Code
 
-> Shared steps — Installation, getting your Zoho MCP URL (MCP Setup Step 1), and the pre-flight checklist — are in `setup-common.md`. This file covers only what's specific to Claude Code.
+> Shared installation, personal MCP URL, and pre-flight steps are in `setup-common.md`. This file covers only what's specific to Claude Code.
 
 ## Skill Activation
 
@@ -12,7 +12,7 @@ Claude Code picks up skills automatically from the `skills/` directory. To verif
 
 ## MCP Setup — Step 2: Add the MCP server to your project
 
-First complete **Step 1** in `setup-common.md` to get your Zoho MCP URL. Claude Code reads MCP servers from a `.mcp.json` file in your **project root** (this is different from Claude Desktop, which uses `claude_desktop_config.json`). Create or edit `.mcp.json`:
+First complete the **Personal MCP Setup** in `setup-common.md` to get your Zoho MCP URL. Claude Code reads MCP servers from a `.mcp.json` file in your **project root** (this is different from Claude Desktop, which uses `claude_desktop_config.json`). Create or edit `.mcp.json`:
 
 ```json
 {

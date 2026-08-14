@@ -21,9 +21,11 @@ Use this reference when the user wants to switch the Catalyst MCP server to a di
 
 ## Codex
 
-Codex uses the Catalyst by Zoho connector/plugin for MCP access. Update the Catalyst connector configuration to the new DC-specific MCP URL, then reconnect or restart the Codex task so the tool list is refreshed.
+Load the dedicated `catalyst-switch-dc` skill. The Codex plugin bundles one immutable OAuth MCP definition per supported region; the skill enables exactly one through plugin-scoped policy in `~/.codex/config.toml`.
 
-If the connector exposes an MCP URL during setup, use the matching URL from the table above. After changing the URL, expect a new browser authorization flow for the selected DC. Credentials and sessions on the old DC are not affected.
+Do **not** modify the installed plugin's `.mcp.json`. Codex manages that file and plugin upgrades or cache reconciliation can replace local edits.
+
+After switching, stop all Catalyst MCP operations in the current session and restart Codex so its tool list is rebuilt. Expect a browser authorization flow for the newly selected DC. Credentials and sessions on the old DC are not affected.
 
 ---
 
@@ -77,6 +79,7 @@ Edit `.vscode/mcp.json` in the workspace root. Update the `url` field under `ser
 - Restart your AI client to apply the change.
 - After restart, you'll be prompted to log in to your Zoho account for the new DC — this is expected.
 - Your session on the old DC is not affected.
+- Do not perform Catalyst MCP operations in the session that changed the DC.
 - Until authentication completes, only `authenticate` and `complete_authentication` tools will be visible.
 
 ---
@@ -85,6 +88,6 @@ Edit `.vscode/mcp.json` in the workspace root. Update the `url` field under `ser
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| DC switch has no effect after restart | Connector or client cache not refreshed | In Codex, reconnect the Catalyst connector and restart the task. In Claude Code, find and update all `.mcp.json` files under `~/.claude/plugins/` referencing `zohomcp` |
+| DC switch has no effect after restart | Client did not reload the selected endpoint | In Codex, run the `catalyst-switch-dc` status check and restart the task. In Claude Code, find and update all `.mcp.json` files under `~/.claude/plugins/` referencing `zohomcp` |
 | Only `authenticate` tool visible after switch | Not yet authorized on the new DC | Complete the browser login flow that appears after restarting |
-| Org data from wrong DC appears | Connector or cache still points to the old DC | In Codex, re-check the connector URL and reconnect the task. In Claude Code, verify all three cache paths have the new URL |
+| Org data from wrong DC appears | More than one regional server is enabled or the old session is still active | In Codex, select exactly one DC with `catalyst-switch-dc` and restart. In Claude Code, verify all three cache paths have the new URL |

@@ -28,13 +28,9 @@ For MCP client configs, append `/mcp/message` to the base URL.
 
 Replace `<dc-base-url>` with your DC base URL from the table above.
 
-**For Codex** — install or enable the Catalyst by Zoho plugin/connector, then configure the Catalyst MCP server URL for the correct DC when prompted by the connector setup:
+**For Codex** — install or enable the Catalyst by Zoho plugin, then load `catalyst-switch-dc` and explicitly choose the account's DC. The plugin already bundles each literal regional URL, disabled by default. The switch skill enables exactly one through `~/.codex/config.toml` plugin policy. Restart Codex and complete OAuth after selecting or changing a DC.
 
-```text
-<dc-base-url>/mcp/message
-```
-
-Restart or reconnect the Codex task after changing the connector configuration.
+Do not edit the installed plugin's `.mcp.json`; managed plugin files can be replaced during upgrades or cache reconciliation.
 
 **For Claude Desktop** — edit `claude_desktop_config.json`
 (macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -77,7 +73,7 @@ Windows: `%APPDATA%\Claude\claude_desktop_config.json`):
 }
 ```
 
-> **Using Codex?** Update the Catalyst by Zoho connector to the correct DC URL, then reconnect the task.
+> **Using Codex?** Run `catalyst-switch-dc`, select one explicit region, and restart the task. Never continue MCP operations in the session that changed the DC.
 > **Using Claude Code?** Run `/switch-dc <region>` — it handles the Claude plugin caches automatically.
 
 **Step 3 — Authorize:**

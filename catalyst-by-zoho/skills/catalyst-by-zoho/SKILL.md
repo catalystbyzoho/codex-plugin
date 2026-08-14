@@ -2,7 +2,7 @@
 name: catalyst-by-zoho
 description: "Expert coding assistant for Catalyst by Zoho — Zoho's full-stack serverless cloud platform. Use for any question about Catalyst services, CLI, SDKs, architecture, pricing, or Zoho MCP tool-based infrastructure management."
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # Catalyst by Zoho — Skill Index
@@ -68,7 +68,7 @@ Look for the `ZohoMCP_*` **meta-tools** in your tool list — `ZohoMCP_getSchema
      ```
   4. Tools with no required path variables (e.g. `List_All_Organizations`, `List_All_Projects`) can be called with `arguments: {}`.
 - **If the meta-tools are NOT present and the task creates resources, writes files, deploys, or reads project IDs** — **HARD STOP.** Do NOT write any code or create any files. Tell the user:
-  > "Zoho MCP needs to be connected before I can work with your Catalyst project. Load the `catalyst-zoho-mcp` skill to set it up — it takes under a minute."
+  > "Zoho MCP needs to be connected before I can work with your Catalyst project. In Codex, load `catalyst-switch-dc`, explicitly select your account's regional DC, and restart. In other clients, load `catalyst-zoho-mcp` for setup."
   Do not proceed until the `ZohoMCP_*` meta-tools are visible.
 
 **This gate applies only when the task writes Catalyst project files, deploys, reads project/environment IDs, or performs MCP project operations.** Skip it for informational questions (pricing, architecture advice, service selection, "what is Catalyst?", install help, SDK usage, or any question that doesn't require an initialized project).
@@ -134,6 +134,7 @@ New to Catalyst? Here's what each service does in one line:
 | SmartBrowz — headless browser, Puppeteer, Playwright, Selenium, Browser Logic, PDF generation, screenshot, Browser Grid, Dataverse | `catalyst-smartbrowz` |
 | Job Scheduling — cron/scheduled execution, recurring jobs | `catalyst-basics` (load `../catalyst-basics/references/architecture.md` — no dedicated skill yet) |
 | Zoho MCP — MCP setup, `CatalystbyZoho_*` tools, infra-as-conversation | `catalyst-zoho-mcp` |
+| Codex Catalyst MCP data-center selection or switching | `catalyst-switch-dc` |
 | Skill gave wrong or outdated guidance — user reporting an error | load `references/skill-feedback.md` |
 
 ---
