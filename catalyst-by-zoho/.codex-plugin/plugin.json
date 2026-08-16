@@ -1,6 +1,6 @@
 {
   "name": "catalyst-by-zoho",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Extend Codex with Catalyst by Zoho's capabilities.",
   "author": {
     "name": "Catalyst by Zoho",
@@ -18,7 +18,7 @@
     "cloud"
   ],
   "skills": "./skills/",
-  "apps": "./.app.json",
+  "mcpServers": "./.mcp.json",
   "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Catalyst by Zoho",

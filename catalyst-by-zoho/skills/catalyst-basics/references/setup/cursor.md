@@ -1,6 +1,6 @@
 # Using Catalyst Skills with Cursor
 
-> Shared steps — Installation, getting your Zoho MCP URL (MCP Setup Step 1), and the pre-flight checklist — are in `setup-common.md`. This file covers only what's specific to Cursor.
+> Shared installation, personal MCP URL, and pre-flight steps are in `setup-common.md`. This file covers only what's specific to Cursor.
 
 ## Skill Activation
 
@@ -12,7 +12,7 @@ Cursor reads skills from the `skills/` directory in your workspace. To verify:
 
 ## MCP Setup — Step 2: Add to Cursor MCP config
 
-First complete **Step 1** in `setup-common.md` to get your Zoho MCP URL. Then create or edit `.cursor/mcp.json` in your project root:
+First complete the **Personal MCP Setup** in `setup-common.md` to get your Zoho MCP URL. Then create or edit `.cursor/mcp.json` in your project root:
 
 ```json
 {

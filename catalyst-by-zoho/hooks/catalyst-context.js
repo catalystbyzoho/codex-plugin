@@ -35,8 +35,10 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { execSync } = require('child_process');
+const { DC_URLS, readDcPolicies } = require('../scripts/switch-dc');
 
 // Prerequisite thresholds — bump here when Catalyst raises its minimums.
 const MIN_CLI = [1, 27, 0];    // non-interactive (-ni) mode support
@@ -86,11 +88,11 @@ function gte(a, b) {
   return true;
 }
 
-// Look for the Catalyst MCP server in the .mcp.json files this hook can see:
+// Look for Catalyst MCP server definitions in the .mcp.json files this hook can see:
 // the project's own config, then the plugin's bundled config (via
 // PLUGIN_ROOT — the plugin may ship its own .mcp.json, so the server can be
-// provided there as well as by the user's project). This detects whether the
-// server is *configured* and at which endpoint — it says NOTHING about live
+// provided there as well as by the user's project). This detects definitions
+// only — it says NOTHING about effective enablement, live
 // connectivity or authentication, which only the model's tool list can confirm.
 // MCP can also be configured in global/user settings the hook cannot read, so a
 // negative result is informational, not authoritative.
@@ -110,14 +112,54 @@ function findCatalystMcp(projectRoot) {
 
   for (const { p, label } of candidates) {
     const cfg = readJsonSafe(p);
-    const servers = cfg && cfg.mcpServers;
+    const servers = cfg && (cfg.mcpServers || cfg.mcp_servers || cfg);
     if (!servers || typeof servers !== 'object') continue;
-    const key = Object.keys(servers).find((k) => /catalyst/i.test(k));
-    if (key) {
-      return { found: true, source: label, url: (servers[key] && servers[key].url) || '' };
+    const definitions = Object.entries(servers)
+      .filter(([key, value]) => /catalyst/i.test(key) && value && typeof value === 'object')
+      .map(([key, value]) => ({ key, url: value.url || '', enabled: value.enabled }));
+    if (definitions.length > 0) {
+      return { found: true, source: label, definitions };
     }
   }
   return { found: false };
+}
+
+// Codex overlays enablement for plugin-provided MCP servers from
+// ~/.codex/config.toml. Transport URLs remain immutable in the plugin bundle;
+// only the selected regional server should be enabled in user policy.
+function findCodexDcSelection() {
+  const codexHome = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
+  const configPath = path.join(codexHome, 'config.toml');
+  let text = '';
+  try {
+    text = fs.readFileSync(configPath, 'utf8');
+  } catch (e) {
+    return { state: 'missing', configPath, policies: [], enabled: [] };
+  }
+
+  const policies = readDcPolicies(text).filter((policy) =>
+    policy.pluginId.startsWith('catalyst-by-zoho@')
+  );
+  const enabled = policies.filter((policy) => policy.enabled === true);
+  const pluginIds = [...new Set(policies.map((policy) => policy.pluginId))];
+
+  if (enabled.length === 1 && pluginIds.length === 1) {
+    const selected = enabled[0];
+    return {
+      state: 'valid',
+      configPath,
+      policies,
+      enabled,
+      pluginId: selected.pluginId,
+      dc: selected.dc,
+      server: selected.server,
+      url: DC_URLS[selected.dc],
+    };
+  }
+  if (enabled.length === 0) {
+    return { state: 'missing', configPath, policies, enabled, pluginIds };
+  }
+  return { state: 'ambiguous', configPath, policies, enabled, pluginIds };
 }
 
 // ---------------------------------------------------------------------------
@@ -437,6 +479,7 @@ function main() {
   // type or the human name signals it. Kept intentionally loose so that a
   // "Production", "prod", or "Live" environment all escalate the warning.
   const isProduction = /prod|live/i.test(`${envType} ${envName}`);
+  const dcSelection = findCodexDcSelection();
 
   const lines = [
     'Catalyst workspace detected (.catalystrc) — the active org/project are read from it:',
@@ -445,6 +488,9 @@ function main() {
     `- Environment: ${envName || 'Development'}${isProduction ? ' (PRODUCTION)' : ''}`,
     domain ? `- Domain: ${domain}` : null,
     timezone ? `- Timezone: ${timezone}` : null,
+    dcSelection.state === 'valid'
+      ? `- Catalyst MCP data center: ${dcSelection.dc} (${dcSelection.url}, server=${dcSelection.server})`
+      : null,
     'Do NOT re-derive these with List_All_Organizations / List_All_Projects. Before MCP resource operations, follow the canonical pre-flight (skills/catalyst-basics/references/preflight.md): confirm the MCP account and CLI agree via CatalystbyZoho_Get_Project_By_Id on this project, then operate. Never assume an org/project that is not in .catalystrc — if .catalystrc is absent, resolve and confirm the project with the user first (see the pre-flight Golden Rule).',
     'Local-first workflow: Catalyst has three environments — Local (this machine, via `catalyst serve`), Development (remote sandbox, the default `catalyst deploy` target), and Production (remote/live, reached only by migrating verified Development changes up). For components you run yourself (Functions, AppSail, Slate), serve and test on Local before deploying to Development, and promote to Production only after Development is verified. Local is coupled to Development: it has no standalone data plane, so Data Store / Stratus / other managed-service calls proxy to the Development environment and act on real Development data. Do not deploy freshly written or changed serve-able code without a local serve + test pass first. Full loop: skills/catalyst-basics/references/project-basics.md -> Environments.',
     'Catalyst MCP operates on LIVE cloud resources: writes, deletes, and schema changes take effect immediately and may be irreversible or incur billing.',
@@ -453,9 +499,8 @@ function main() {
       : null,
   ].filter(Boolean);
 
-  // MCP configuration note — presence + endpoint only; never a connectivity or
-  // auth claim (only the model's tool list can confirm those). Wrapped so a
-  // parse failure never disrupts startup.
+  // MCP definition + effective regional selection note. Never claim live
+  // connectivity or auth (only the model's tool list can confirm those).
   let mcp = { found: false };
   try {
     mcp = findCatalystMcp(projectRoot);
@@ -463,12 +508,26 @@ function main() {
     mcp = { found: false };
   }
   if (mcp.found) {
+    const endpoints = mcp.definitions.map((definition) => definition.url).filter(Boolean);
     lines.push(
-      `MCP: the catalyst-by-zoho server is configured (endpoint ${mcp.url || 'unknown'}, via ${mcp.source} .mcp.json). That endpoint is data-center-specific — if MCP calls fail with region/auth errors the account's DC may differ from this endpoint; update the Catalyst by Zoho connector or MCP configuration to the correct data center and reconnect the task. This hook does NOT verify live MCP connectivity or authentication: before the first MCP resource operation confirm the ZohoMCP_* meta-tools (ZohoMCP_getSchema, ZohoMCP_executeTool, ZohoMCP_listTools, ZohoMCP_getFeatures) are present in the tool list — that is the connectivity signal; the CatalystbyZoho_* names are tool_name values passed to ZohoMCP_executeTool, never visible tools. Expect a one-time authentication on the first call.`
+      `MCP: ${mcp.definitions.length} Catalyst regional server definition(s) were found via ${mcp.source} .mcp.json${endpoints.length ? ` (${endpoints.join(', ')})` : ''}. Definitions are not proof of enablement, connectivity, or authentication. Effective regional enablement is read from Codex plugin policy in ~/.codex/config.toml. Before the first MCP resource operation confirm the ZohoMCP_* meta-tools (ZohoMCP_getSchema, ZohoMCP_executeTool, ZohoMCP_listTools, ZohoMCP_getFeatures) are present in the tool list — that is the connectivity signal; the CatalystbyZoho_* names are tool_name values passed to ZohoMCP_executeTool, never visible tools.`
     );
   } else {
     lines.push(
-      'MCP: no catalyst-by-zoho server was found in the .mcp.json files this hook can see (project or plugin). This is NOT authoritative — it may be configured in global/user settings. Before any MCP resource operation, confirm the ZohoMCP_* meta-tools (ZohoMCP_getSchema, ZohoMCP_executeTool, ZohoMCP_listTools, ZohoMCP_getFeatures) are present in the tool list — that is the connectivity signal; the CatalystbyZoho_* names are tool_name values passed to ZohoMCP_executeTool, never visible tools. If the meta-tools are absent, guide the user through MCP setup (catalyst-zoho-mcp skill). Authentication is established lazily on the first MCP call.'
+      'MCP: no Catalyst server definition was found in the .mcp.json files this hook can see (project or plugin). This is NOT authoritative — it may be configured in global/user settings. Before any MCP resource operation, confirm the ZohoMCP_* meta-tools are present. If they are absent, load the catalyst-switch-dc skill and guide the user through explicit regional setup.'
+    );
+  }
+  if (dcSelection.state === 'valid') {
+    lines.push(
+      `MCP regional policy is valid: exactly one server is enabled for ${dcSelection.dc} (${dcSelection.url}). This does not prove the current session loaded that server; verify the ZohoMCP_* meta-tools before use.`
+    );
+  } else if (dcSelection.state === 'missing') {
+    lines.push(
+      'MCP REGIONAL BLOCKER: no Catalyst regional server is enabled in Codex plugin policy. Do not call any Catalyst/Zoho MCP tool. Ask the user to explicitly choose a DC, load catalyst-switch-dc, update the policy, and restart Codex.'
+    );
+  } else {
+    lines.push(
+      `MCP REGIONAL BLOCKER: multiple Catalyst regional servers or plugin installations are enabled (${dcSelection.enabled.map((policy) => `${policy.pluginId}/${policy.dc}`).join(', ')}). Do not call any Catalyst/Zoho MCP tool. Resolve to exactly one explicit DC with catalyst-switch-dc, then restart Codex.`
     );
   }
 
@@ -478,6 +537,15 @@ function main() {
     issues = runPrereqChecks(projectRoot).issues;
   } catch (e) {
     issues = [];
+  }
+  if (dcSelection.state !== 'valid') {
+    issues.unshift({
+      level: 'blocker',
+      user: dcSelection.state === 'missing'
+        ? 'No Catalyst MCP data center is selected. Choose US, EU, IN, AU, CA, SA, JP, or UAE with the catalyst-switch-dc skill, then restart Codex.'
+        : 'Multiple Catalyst MCP regional servers are enabled. Use the catalyst-switch-dc skill to select exactly one, then restart Codex.',
+      codex: 'Catalyst MCP regional policy is not valid. Do not invoke ZohoMCP_* tools until the user explicitly selects exactly one DC and restarts Codex.',
+    });
   }
 
   const blockers = issues.filter((i) => i.level === 'blocker');
@@ -493,9 +561,10 @@ function main() {
 
   // systemMessage is rendered directly to the user (a visible banner), unlike
   // additionalContext which is only seen by the model.
+  const dcLabel = dcSelection.state === 'valid' ? `, MCP DC: ${dcSelection.dc}` : ', MCP DC: NOT SAFELY CONFIGURED';
   const banner = isProduction
-    ? `⚠️  Catalyst: active environment is PRODUCTION (${envName || 'unknown'}${domain ? `, ${domain}` : ''}). MCP operations run on live resources — writes and deletes take effect immediately and may be irreversible. Confirm each change before it runs.`
-    : `⚠️  Catalyst workspace active — environment: ${envName || 'Development'}${domain ? ` (${domain})` : ''}. MCP operations run on live cloud resources; deletions are permanent and may incur billing.`;
+    ? `⚠️  Catalyst: active environment is PRODUCTION (${envName || 'unknown'}${domain ? `, ${domain}` : ''}${dcLabel}). MCP operations run on live resources — writes and deletes take effect immediately and may be irreversible. Confirm each change before it runs.`
+    : `⚠️  Catalyst workspace active — environment: ${envName || 'Development'}${domain ? ` (${domain})` : ''}${dcLabel}. MCP operations run on live cloud resources; deletions are permanent and may incur billing.`;
 
   let systemMessage = banner;
   if (issues.length > 0) {
@@ -516,9 +585,17 @@ function main() {
   process.stdout.write(JSON.stringify(output));
 }
 
-try {
-  main();
-} catch (e) {
-  // never let a hook error disrupt session startup
+if (require.main === module) {
+  try {
+    main();
+  } catch (e) {
+    // never let a hook error disrupt session startup
+  }
+  process.exit(0);
 }
-process.exit(0);
+
+module.exports = {
+  findCatalystMcp,
+  findCodexDcSelection,
+  main,
+};

@@ -1,6 +1,6 @@
 # Using Catalyst Skills with GitHub Copilot (VS Code)
 
-> Shared steps — Installation, getting your Zoho MCP URL (MCP Setup Step 1), and the pre-flight checklist — are in `setup-common.md`. This file covers only what's specific to GitHub Copilot in VS Code.
+> Shared installation, personal MCP URL, and pre-flight steps are in `setup-common.md`. This file covers only what's specific to GitHub Copilot in VS Code.
 
 ## Skill Activation
 
@@ -11,7 +11,7 @@ GitHub Copilot in VS Code picks up skills from the `skills/` directory. To verif
 
 ## MCP Setup — Step 2: Add to VS Code MCP config
 
-First complete **Step 1** in `setup-common.md` to get your Zoho MCP URL. Then create `.vscode/mcp.json` in your workspace root. **Note the VS Code dialect differs:** the top-level key is `servers` (not `mcpServers`) and the type is `"http"` (not `"streamable-http"`):
+First complete the **Personal MCP Setup** in `setup-common.md` to get your Zoho MCP URL. Then create `.vscode/mcp.json` in your workspace root. **Note the VS Code dialect differs:** the top-level key is `servers` (not `mcpServers`) and the type is `"http"` (not `"streamable-http"`):
 
 ```json
 {
