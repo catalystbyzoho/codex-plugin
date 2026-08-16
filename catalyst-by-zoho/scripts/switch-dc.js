@@ -207,6 +207,10 @@ function atomicWriteWithBackup(configPath, content) {
     lockFd = fs.openSync(lockPath, 'wx', 0o600);
     fs.writeFileSync(lockFd, `${process.pid}\n`);
   } catch (error) {
+    if (lockFd !== undefined) {
+      try { fs.closeSync(lockFd); } catch (_) {}
+      try { fs.unlinkSync(lockPath); } catch (_) {}
+    }
     if (error.code === 'EEXIST') {
       throw new Error(`Another Catalyst DC update may be running (${lockPath} exists).`);
     }
